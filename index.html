@@ -80,7 +80,7 @@
 
   <!-- TRAJECTORY -->
   <div class="card">
-    <div class="sec">Trajectory to 165</div>
+    <div class="sec">Trajectory to goal</div>
     <div class="grid3">
       <div><div class="n" id="tLost">—</div><div class="k">lost</div></div>
       <div><div class="n" id="tTrend">—</div><div class="k">trend lb</div></div>
@@ -224,7 +224,7 @@ function chartSVG(pts){
   const last=pts[pts.length-1];
   return `<svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
     <line x1="${pl}" y1="${gy}" x2="${W-pr}" y2="${gy}" stroke="var(--good)" stroke-dasharray="4 4" stroke-width="1"/>
-    <text x="${pl}" y="${(+gy-4).toFixed(1)}" fill="var(--good)" font-size="10">goal 165</text>
+    <text x="${pl}" y="${(+gy-4).toFixed(1)}" fill="var(--good)" font-size="10">goal ${GOAL}</text>
     <polyline points="${line}" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
     <circle cx="${X(last.t).toFixed(1)}" cy="${Y(last.w).toFixed(1)}" r="3.5" fill="var(--accent)"/>
     <text x="${pl}" y="10" fill="var(--muted)" font-size="10">${yhi.toFixed(0)}</text>
@@ -284,9 +284,9 @@ function renderTargets(s){
   });
   const goalWk=(START-GOAL)/PLAN_RATE;
   const gdt=new Date(startDay*864e5); gdt.setDate(gdt.getDate()+Math.round(goalWk*7));
-  html+=`<div class="row"><div class="label"><div class="t" style="color:var(--good)">Goal 165</div>
+  html+=`<div class="row"><div class="label"><div class="t" style="color:var(--good)">Goal ${GOAL}</div>
     <div class="d">${gdt.toLocaleDateString(undefined,{month:"short",day:"numeric",year:"numeric"})}</div></div>
-    <div style="font-weight:700;color:var(--good)">165.0 lb</div></div>`;
+    <div style="font-weight:700;color:var(--good)">${GOAL.toFixed(1)} lb</div></div>`;
   document.getElementById("targets").innerHTML=html;
 
   const trend=s.length?avg(s.slice(-7).map(p=>p.w)):null;
@@ -307,11 +307,11 @@ function renderTrajectory(s){
   document.getElementById("chartBox").innerHTML = chartSVG(s);
   const eta=document.getElementById("etaLine");
   if(trend==null){ eta.textContent=""; return; }
-  if(trend<=GOAL){ eta.textContent="🎯 At/under 165 — goal reached. Time to switch to maintenance."; return; }
+  if(trend<=GOAL){ eta.textContent=`🎯 At/under ${GOAL} — goal reached. Time to switch to maintenance.`; return; }
   if(pace==null || pace>=0){ eta.textContent="Not losing yet — give the ramp + calibration a couple weeks."; return; }
   const weeks=(trend-GOAL)/(-pace);
   const eend=new Date(); eend.setDate(eend.getDate()+Math.round(weeks*7));
-  eta.textContent=`At this pace: 165 by ${eend.toLocaleDateString(undefined,{month:"short",year:"numeric"})} · ~${Math.round(weeks)} weeks (${(trend-GOAL).toFixed(0)} lb to go).`;
+  eta.textContent=`At this pace: ${GOAL} by ${eend.toLocaleDateString(undefined,{month:"short",year:"numeric"})} · ~${Math.round(weeks)} weeks (${(trend-GOAL).toFixed(0)} lb to go).`;
 }
 
 function renderStatus(s){
