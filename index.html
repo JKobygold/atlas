@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Atlas">
+<meta name="theme-color" content="#111318">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="icon-192.png">
+<title>Atlas — Today</title>
+<style>
+  :root{
+    --bg:#f4f5f7; --card:#ffffff; --ink:#15181d; --muted:#6b7280;
+    --line:#e5e7eb; --good:#1f9d55; --warn:#c2790b; --bad:#c23b3b; --accent:#2f6fed;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{ --bg:#0e0f12; --card:#181b21; --ink:#eef1f5; --muted:#9aa3af;
+           --line:#262b33; --good:#3fce7a; --warn:#e0a53f; --bad:#e06666; --accent:#5b8dff; }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    padding:max(16px,env(safe-area-inset-top)) 16px calc(40px + env(safe-area-inset-bottom));}
+  .wrap{max-width:520px;margin:0 auto;}
+  h1{font-size:15px;font-weight:600;color:var(--muted);letter-spacing:.02em;
+    text-transform:uppercase;margin:4px 0 2px;}
+  .date{font-size:22px;font-weight:700;margin:0 0 16px;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;
+    padding:16px;margin-bottom:14px;}
+  .status{display:flex;align-items:center;gap:10px;font-size:18px;font-weight:700;}
+  .dot{width:12px;height:12px;border-radius:50%;flex:0 0 auto;}
+  .sub{color:var(--muted);font-size:14px;margin-top:6px;}
+  .row{display:flex;justify-content:space-between;align-items:center;gap:12px;
+    padding:12px 0;border-bottom:1px solid var(--line);}
+  .row:last-child{border-bottom:none;}
+  .row .label{flex:1;}
+  .row .t{font-size:12px;color:var(--muted);letter-spacing:.03em;text-transform:uppercase;}
+  .row .d{margin-top:1px;}
+  .check{width:30px;height:30px;border-radius:9px;border:2px solid var(--line);
+    background:transparent;flex:0 0 auto;cursor:pointer;font-size:17px;line-height:1;
+    display:flex;align-items:center;justify-content:center;color:transparent;}
+  .check.on{background:var(--good);border-color:var(--good);color:#fff;}
+  .sec{font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;
+    letter-spacing:.04em;margin:0 0 4px;}
+  .big{font-size:34px;font-weight:800;line-height:1;}
+  .weighrow{display:flex;gap:10px;margin-top:12px;}
+  input[type=number]{flex:1;font-size:18px;padding:12px;border-radius:12px;
+    border:1px solid var(--line);background:var(--bg);color:var(--ink);width:100%;}
+  button.save{padding:0 18px;border:none;border-radius:12px;background:var(--accent);
+    color:#fff;font-size:16px;font-weight:600;cursor:pointer;}
+  select{width:100%;font-size:16px;padding:12px;border-radius:12px;margin-top:8px;
+    border:1px solid var(--line);background:var(--bg);color:var(--ink);}
+  .foot{color:var(--muted);font-size:13px;text-align:center;margin-top:8px;}
+  .pill{display:inline-block;font-size:12px;font-weight:600;padding:3px 9px;border-radius:999px;
+    background:var(--bg);border:1px solid var(--line);color:var(--muted);}
+  .grid3{display:flex;gap:10px;margin:4px 0 12px;}
+  .grid3 > div{flex:1;text-align:center;}
+  .grid3 .n{font-size:20px;font-weight:800;}
+  .grid3 .k{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;}
+  .eta{font-size:15px;font-weight:600;margin-top:4px;}
+  svg.chart{width:100%;height:130px;display:block;}
+  .mini{display:flex;gap:10px;}
+  .mini button{flex:1;padding:11px;border:1px solid var(--line);border-radius:12px;
+    background:var(--bg);color:var(--ink);font-size:14px;font-weight:600;cursor:pointer;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1 id="dayName">Today</h1>
+  <p class="date" id="dateLine"></p>
+
+  <!-- STATUS -->
+  <div class="card">
+    <div class="status"><span class="dot" id="statusDot"></span><span id="statusText">—</span></div>
+    <div class="sub" id="statusSub"></div>
+  </div>
+
+  <!-- TRAJECTORY -->
+  <div class="card">
+    <div class="sec">Trajectory to 165</div>
+    <div class="grid3">
+      <div><div class="n" id="tLost">—</div><div class="k">lost</div></div>
+      <div><div class="n" id="tTrend">—</div><div class="k">trend lb</div></div>
+      <div><div class="n" id="tPace">—</div><div class="k">lb / week</div></div>
+    </div>
+    <div id="chartBox"></div>
+    <div class="eta" id="etaLine"></div>
+  </div>
+
+  <!-- TARGETS -->
+  <div class="card">
+    <div class="sec">Targets — where you should be</div>
+    <div id="targets"></div>
+    <div class="sub" id="targetDelta"></div>
+  </div>
+
+  <!-- WEIGHT -->
+  <div class="card">
+    <div class="sec">Morning weight</div>
+    <div><span class="big" id="wToday">—</span> <span class="pill" id="wAvg"></span></div>
+    <div class="weighrow">
+      <input type="number" id="wInput" inputmode="decimal" step="0.1" placeholder="e.g. 204.6">
+      <button class="save" id="wSave">Log</button>
+    </div>
+  </div>
+
+  <!-- WORKOUT -->
+  <div class="card">
+    <div class="sec">Today's movement <span class="pill" id="rampPill"></span></div>
+    <div class="row">
+      <div class="label"><div class="d" id="workoutText"></div></div>
+      <button class="check" data-k="workout">✓</button>
+    </div>
+  </div>
+
+  <!-- MEALS -->
+  <div class="card">
+    <div class="sec">Meals — tap when eaten</div>
+    <div id="meals"></div>
+  </div>
+
+  <!-- DAY MODE -->
+  <div class="card">
+    <div class="sec">Day mode</div>
+    <select id="mode">
+      <option value="standard">Standard — full plan</option>
+      <option value="late">Late-Wake — compress AM, shift walk to evening</option>
+      <option value="lowsleep">Low-Sleep — strength down, food same, early bed</option>
+      <option value="recovery">Recovery — walk + yoga only, food same</option>
+      <option value="emergency">Emergency — minimum-viable day, no punishment</option>
+    </select>
+  </div>
+
+  <!-- BACKUP -->
+  <div class="card">
+    <div class="sec">Backup</div>
+    <div class="mini">
+      <button id="exportBtn">Export data</button>
+      <button id="importBtn">Import data</button>
+      <input type="file" id="importFile" accept="application/json" style="display:none">
+    </div>
+    <div class="sub">Your data lives on this device. Export now and then so it can never get lost.</div>
+  </div>
+
+  <p class="foot">1,900 kcal · 180g+ protein · 205 → 165 · the machine decides, you execute.</p>
+</div>
+
+<script>
+"use strict";
+const START=205, GOAL=165, PLAN_RATE=1.75; // lb/week planned pace (midpoint of 1.5–2.0)
+const MEALS = [
+  ["Breakfast","3 eggs + 1 cup egg whites + 1 apple"],
+  ["Lunch","6 oz chicken + big salad + 2 tbsp light dressing"],
+  ["Snack","1 cup Fage 0% + 1 scoop whey"],
+  ["Pre-train fuel","1 cup cooked rice (or banana)"],
+  ["Dinner","6 oz chicken + broccoli + cauliflower"],
+  ["Snack","Protein shake (or string cheese)"],
+];
+const RAMP = [
+  "1 walk — 20–30 min. No training yet: lock the food + one walk.",
+  "1 walk — 40 min. Plus 2× short bag/strength this week (20 min each).",
+  "1 walk — 45–60 min. Plus bag + progressive strength (30–40 min).",
+  "Walk 45–60 min (+2nd walk). Full rotation: bag/dance/martial arts/yoga + 3× strength."
+];
+
+const KEY="atlas_v1";
+const load=()=>{try{return JSON.parse(localStorage.getItem(KEY))||{}}catch(e){return {}}};
+const save=s=>localStorage.setItem(KEY,JSON.stringify(s));
+let S=load();
+if(!S.days) S.days={};
+if(!S.start) S.start=todayKey();
+function todayKey(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+function day(k){ if(!S.days[k]) S.days[k]={meals:{},workout:false,mode:"standard",weight:null}; return S.days[k]; }
+function rampWeek(){ const ms=new Date(todayKey())-new Date(S.start); return Math.max(1,Math.min(4,Math.floor(ms/(7*864e5))+1)); }
+
+function series(){
+  return Object.keys(S.days).filter(k=>S.days[k].weight!=null)
+    .sort().map(k=>({t:new Date(k).getTime()/864e5, w:S.days[k].weight}));
+}
+const avg=a=>a.reduce((x,y)=>x+y,0)/a.length;
+function slopePerWeek(pts){
+  const n=pts.length; if(n<2) return null;
+  const mx=avg(pts.map(p=>p.t)), my=avg(pts.map(p=>p.w));
+  let num=0,den=0; pts.forEach(p=>{num+=(p.t-mx)*(p.w-my);den+=(p.t-mx)**2;});
+  return den===0?null:(num/den)*7;
+}
+
+// ---- trajectory chart (SVG) ----
+function chartSVG(pts){
+  if(pts.length<2) return '<div class="sub">Log a couple mornings and your line appears here.</div>';
+  const W=320,H=130,pl=30,pr=10,pt=12,pb=18;
+  const xs=pts.map(p=>p.t), ws=pts.map(p=>p.w);
+  const xmin=Math.min(...xs), xmax=Math.max(...xs);
+  const ymax=Math.max(START,...ws), ymin=Math.min(GOAL,...ws);
+  const yhi=ymax+1, ylo=ymin-1;
+  const X=t=> pl+(xmax===xmin?0:(t-xmin)/(xmax-xmin))*(W-pl-pr);
+  const Y=w=> pt+(yhi-w)/(yhi-ylo)*(H-pt-pb);
+  const line=pts.map(p=>X(p.t).toFixed(1)+","+Y(p.w).toFixed(1)).join(" ");
+  const gy=Y(GOAL).toFixed(1);
+  const last=pts[pts.length-1];
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+    <line x1="${pl}" y1="${gy}" x2="${W-pr}" y2="${gy}" stroke="var(--good)" stroke-dasharray="4 4" stroke-width="1"/>
+    <text x="${pl}" y="${(+gy-4).toFixed(1)}" fill="var(--good)" font-size="10">goal 165</text>
+    <polyline points="${line}" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+    <circle cx="${X(last.t).toFixed(1)}" cy="${Y(last.w).toFixed(1)}" r="3.5" fill="var(--accent)"/>
+    <text x="${pl}" y="10" fill="var(--muted)" font-size="10">${yhi.toFixed(0)}</text>
+    <text x="${pl}" y="${H-6}" fill="var(--muted)" font-size="10">${ylo.toFixed(0)}</text>
+  </svg>`;
+}
+
+function render(){
+  const k=todayKey(), d=day(k);
+  const names=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+  const now=new Date();
+  document.getElementById("dayName").textContent=names[now.getDay()];
+  document.getElementById("dateLine").textContent=now.toLocaleDateString(undefined,{month:"long",day:"numeric"});
+
+  const wk=rampWeek();
+  document.getElementById("rampPill").textContent="Ramp wk "+wk;
+  document.getElementById("workoutText").textContent=RAMP[wk-1];
+
+  const box=document.getElementById("meals"); box.innerHTML="";
+  MEALS.forEach((m,i)=>{
+    const on=!!d.meals[i];
+    const row=document.createElement("div"); row.className="row";
+    row.innerHTML=`<div class="label"><div class="t">${m[0]}</div><div class="d">${m[1]}</div></div>
+      <button class="check ${on?"on":""}" data-meal="${i}">✓</button>`;
+    box.appendChild(row);
+  });
+  document.querySelector('[data-k="workout"]').classList.toggle("on",!!d.workout);
+  document.getElementById("mode").value=d.mode||"standard";
+
+  const s=series();
+  document.getElementById("wToday").textContent = d.weight!=null ? d.weight.toFixed(1) : "—";
+  const last7=s.slice(-7).map(p=>p.w);
+  document.getElementById("wAvg").textContent = last7.length ? ("7-day avg "+avg(last7).toFixed(1)+" lb") : "";
+
+  renderTrajectory(s);
+  renderTargets(s);
+  renderStatus(s);
+}
+
+function targetWeight(wksFromStart){ return Math.max(GOAL, START - PLAN_RATE*Math.max(0,wksFromStart)); }
+function renderTargets(s){
+  const startDay=new Date(S.start).getTime()/864e5;
+  const nowW=(new Date(todayKey()).getTime()/864e5 - startDay)/7;
+  const marks=[{lbl:"Today",wk:nowW}];
+  [2,4,6,8].forEach(dw=>marks.push({lbl:"+"+dw+" wk",wk:nowW+dw}));
+  let html="";
+  marks.forEach(m=>{
+    const dt=new Date(); dt.setDate(dt.getDate()+Math.round((m.wk-nowW)*7));
+    html+=`<div class="row"><div class="label"><div class="t">${m.lbl}</div>
+      <div class="d">${dt.toLocaleDateString(undefined,{month:"short",day:"numeric"})}</div></div>
+      <div style="font-weight:700">${targetWeight(m.wk).toFixed(1)} lb</div></div>`;
+  });
+  const goalWk=(START-GOAL)/PLAN_RATE;
+  const gdt=new Date(startDay*864e5); gdt.setDate(gdt.getDate()+Math.round(goalWk*7));
+  html+=`<div class="row"><div class="label"><div class="t" style="color:var(--good)">Goal 165</div>
+    <div class="d">${gdt.toLocaleDateString(undefined,{month:"short",day:"numeric",year:"numeric"})}</div></div>
+    <div style="font-weight:700;color:var(--good)">165.0 lb</div></div>`;
+  document.getElementById("targets").innerHTML=html;
+
+  const trend=s.length?avg(s.slice(-7).map(p=>p.w)):null;
+  const dEl=document.getElementById("targetDelta");
+  if(trend==null){ dEl.textContent="Targets follow the plan's 1.75 lb/week pace from your start date."; return; }
+  const diff=trend-targetWeight(nowW);
+  if(Math.abs(diff)<0.4) dEl.textContent="Right on your target line. 🎯";
+  else if(diff<0) dEl.textContent=`You're ${(-diff).toFixed(1)} lb ahead of target. 🔥`;
+  else dEl.textContent=`You're ${diff.toFixed(1)} lb behind target — normal early while activity ramps.`;
+}
+
+function renderTrajectory(s){
+  const trend = s.length ? avg(s.slice(-7).map(p=>p.w)) : null;
+  const pace = slopePerWeek(s.slice(-14));
+  document.getElementById("tLost").textContent = trend!=null ? (START-trend).toFixed(1) : "—";
+  document.getElementById("tTrend").textContent = trend!=null ? trend.toFixed(1) : "—";
+  document.getElementById("tPace").textContent = pace!=null ? (pace<=0?"":"+")+pace.toFixed(1) : "—";
+  document.getElementById("chartBox").innerHTML = chartSVG(s);
+  const eta=document.getElementById("etaLine");
+  if(trend==null){ eta.textContent=""; return; }
+  if(trend<=GOAL){ eta.textContent="🎯 At/under 165 — goal reached. Time to switch to maintenance."; return; }
+  if(pace==null || pace>=0){ eta.textContent="Not losing yet — give the ramp + calibration a couple weeks."; return; }
+  const weeks=(trend-GOAL)/(-pace);
+  const eend=new Date(); eend.setDate(eend.getDate()+Math.round(weeks*7));
+  eta.textContent=`At this pace: 165 by ${eend.toLocaleDateString(undefined,{month:"short",year:"numeric"})} · ~${Math.round(weeks)} weeks (${(trend-GOAL).toFixed(0)} lb to go).`;
+}
+
+function renderStatus(s){
+  const dot=document.getElementById("statusDot"), txt=document.getElementById("statusText"), sub=document.getElementById("statusSub");
+  const set=(c,t,st)=>{dot.style.background=c;txt.textContent=t;sub.textContent=st;};
+  const n=s.length;
+  if(n<7){ set("var(--muted)","Calibrating", `Log your morning weight daily. ${7-n} more day${7-n===1?"":"s"} for a first read (14 for a locked trend).`); return; }
+  const sp=slopePerWeek(s.slice(-14));
+  if(sp==null){ set("var(--muted)","Calibrating","Keep logging."); return; }
+  const loss=-sp, locked=n>=14, tail=locked?"":" (still calibrating — 14 days for a locked read)";
+  if(loss>=1.5&&loss<=2.0) set("var(--good)","On track", `Losing ${loss.toFixed(1)} lb/week — right in the band. Change nothing.${tail}`);
+  else if(loss>=1.0&&loss<1.5) set("var(--warn)","Losing — a touch slow", `${loss.toFixed(1)} lb/week. ${locked?"If still under 1.5 after 14 days, drop 150 kcal.":"Give it the full 14 days first."}${tail}`);
+  else if(loss>2.0) set("var(--warn)","Losing fast", `${loss.toFixed(1)} lb/week — watch energy. ${locked?"If sustained, add 150 kcal.":""}${tail}`);
+  else set("var(--bad)","Stalled", `Trend is ${loss>=0?"only "+loss.toFixed(1)+" lb/week":"up "+Math.abs(loss).toFixed(1)+" lb/week"}. Hold the plan a few days — often water. ${locked?"If real after 14 days, drop 150 kcal.":""}${tail}`);
+}
+
+// ---- events ----
+document.addEventListener("click",e=>{
+  const mb=e.target.closest("[data-meal]");
+  if(mb){ const d=day(todayKey()); d.meals[mb.dataset.meal]=!d.meals[mb.dataset.meal]; save(S); render(); return; }
+  const wb=e.target.closest('[data-k="workout"]');
+  if(wb){ const d=day(todayKey()); d.workout=!d.workout; save(S); render(); return; }
+});
+document.getElementById("wSave").addEventListener("click",()=>{
+  const v=parseFloat(document.getElementById("wInput").value);
+  if(!isNaN(v)&&v>0){ day(todayKey()).weight=v; save(S); document.getElementById("wInput").value=""; render(); }
+});
+document.getElementById("mode").addEventListener("change",e=>{ day(todayKey()).mode=e.target.value; save(S); });
+
+// ---- backup ----
+document.getElementById("exportBtn").addEventListener("click",()=>{
+  const blob=new Blob([JSON.stringify(S,null,2)],{type:"application/json"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob); a.download="atlas-backup-"+todayKey()+".json"; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+});
+document.getElementById("importBtn").addEventListener("click",()=>document.getElementById("importFile").click());
+document.getElementById("importFile").addEventListener("change",e=>{
+  const f=e.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=()=>{ try{
+    const inc=JSON.parse(r.result);
+    if(inc.days){ S.days=Object.assign({},inc.days,S.days); } // keep newer local edits on conflict
+    if(inc.start && !S.start) S.start=inc.start;
+    save(S); render(); alert("Imported.");
+  }catch(err){ alert("Couldn't read that file."); } };
+  r.readAsText(f);
+});
+
+if("serviceWorker" in navigator){ navigator.serviceWorker.register("sw.js").catch(()=>{}); }
+save(S); render();
+</script>
+</body>
+</html>
