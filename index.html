@@ -134,6 +134,25 @@
     </select>
   </div>
 
+  <!-- SETTINGS -->
+  <div class="card">
+    <div class="sec">Your numbers</div>
+    <div class="mini">
+      <div style="flex:1"><div class="k" style="font-size:11px;color:var(--muted)">Start lb</div>
+        <input type="number" id="cfgStart" step="0.1" inputmode="decimal"></div>
+      <div style="flex:1"><div class="k" style="font-size:11px;color:var(--muted)">Goal lb</div>
+        <input type="number" id="cfgGoal" step="0.1" inputmode="decimal"></div>
+    </div>
+    <div class="mini" style="margin-top:8px">
+      <div style="flex:1"><div class="k" style="font-size:11px;color:var(--muted)">Calories</div>
+        <input type="number" id="cfgKcal" step="10" inputmode="numeric"></div>
+      <div style="flex:1"><div class="k" style="font-size:11px;color:var(--muted)">Protein g</div>
+        <input type="number" id="cfgProtein" step="5" inputmode="numeric"></div>
+    </div>
+    <div class="weighrow"><button class="save" id="cfgSave" style="flex:1">Save my numbers</button></div>
+    <div class="sub">Stored only on this device. The app ships with placeholders — set your real targets here.</div>
+  </div>
+
   <!-- BACKUP -->
   <div class="card">
     <div class="sec">Backup</div>
@@ -145,12 +164,12 @@
     <div class="sub">Your data lives on this device. Export now and then so it can never get lost.</div>
   </div>
 
-  <p class="foot">1,900 kcal · 180g+ protein · 205 → 165 · the machine decides, you execute.</p>
+  <p class="foot" id="foot"></p>
 </div>
 
 <script>
 "use strict";
-const START=205, GOAL=165, PLAN_RATE=1.75; // lb/week planned pace (midpoint of 1.5–2.0)
+const PLAN_RATE=1.75; // lb/week planned pace (midpoint of 1.5–2.0)
 const MEALS = [
   ["Breakfast","3 eggs + 1 cup egg whites + 1 apple"],
   ["Lunch","6 oz chicken + big salad + 2 tbsp light dressing"],
@@ -172,6 +191,8 @@ const save=s=>localStorage.setItem(KEY,JSON.stringify(s));
 let S=load();
 if(!S.days) S.days={};
 if(!S.start) S.start=todayKey();
+if(!S.cfg) S.cfg={start:200, goal:180, kcal:2000, protein:160}; // neutral defaults; user sets real values on-device
+let START=S.cfg.start, GOAL=S.cfg.goal;
 function todayKey(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
 function day(k){ if(!S.days[k]) S.days[k]={meals:{},workout:false,mode:"standard",weight:null}; return S.days[k]; }
 function rampWeek(){ const ms=new Date(todayKey())-new Date(S.start); return Math.max(1,Math.min(4,Math.floor(ms/(7*864e5))+1)); }
@@ -232,6 +253,11 @@ function render(){
   });
   document.querySelector('[data-k="workout"]').classList.toggle("on",!!d.workout);
   document.getElementById("mode").value=d.mode||"standard";
+
+  document.getElementById("foot").textContent=`${S.cfg.kcal} kcal · ${S.cfg.protein}g+ protein · ${START} → ${GOAL} · the machine decides, you execute.`;
+  ["Start","Goal","Kcal","Protein"].forEach(f=>{
+    const el=document.getElementById("cfg"+f); if(el && document.activeElement!==el) el.value=S.cfg[f.toLowerCase()];
+  });
 
   const s=series();
   document.getElementById("wToday").textContent = d.weight!=null ? d.weight.toFixed(1) : "—";
@@ -314,6 +340,13 @@ document.getElementById("wSave").addEventListener("click",()=>{
   if(!isNaN(v)&&v>0){ day(todayKey()).weight=v; save(S); document.getElementById("wInput").value=""; render(); }
 });
 document.getElementById("mode").addEventListener("change",e=>{ day(todayKey()).mode=e.target.value; save(S); });
+document.getElementById("cfgSave").addEventListener("click",()=>{
+  const g=id=>parseFloat(document.getElementById(id).value);
+  const st=g("cfgStart"),go=g("cfgGoal"),kc=g("cfgKcal"),pr=g("cfgProtein");
+  if([st,go,kc,pr].some(v=>isNaN(v)||v<=0)){ alert("Enter all four numbers."); return; }
+  if(go>=st){ alert("Goal should be below start weight."); return; }
+  S.cfg={start:st,goal:go,kcal:kc,protein:pr}; START=st; GOAL=go; save(S); render();
+});
 
 // ---- backup ----
 document.getElementById("exportBtn").addEventListener("click",()=>{
